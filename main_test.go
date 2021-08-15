@@ -125,6 +125,7 @@ func Test_TodoListGet(t *testing.T) {
 			ID:        todoID1,
 			Content:   "To-do get list request olustur.",
 			Done:      false,
+			Index:     0,
 			CratedAt:  time.Now().Round(time.Minute).UTC(),
 			UpdatedAt: time.Now().Round(time.Minute).UTC(),
 		}
@@ -132,6 +133,7 @@ func Test_TodoListGet(t *testing.T) {
 			ID:        todoID2,
 			Content:   "To-do post list request olustur.",
 			Done:      false,
+			Index:     1,
 			CratedAt:  time.Now().Round(time.Minute).UTC(),
 			UpdatedAt: time.Now().Round(time.Minute).UTC(),
 		}
@@ -159,16 +161,17 @@ func Test_TodoListGet(t *testing.T) {
 
 					err = json.Unmarshal(responseBody, &returnedData)
 					So(err, ShouldBeNil)
-
 					So(len(returnedData.TodoList), ShouldEqual, 2)
 					So(returnedData.TodoList[0].ID, ShouldNotBeEmpty)
 					So(returnedData.TodoList[1].ID, ShouldNotBeEmpty)
-					So(returnedData.TodoList[0].ID, ShouldEqual, todoID1)
-					So(returnedData.TodoList[1].ID, ShouldEqual, todoID2)
-					So(returnedData.TodoList[0].Content, ShouldEqual, todoModel1.Content)
-					So(returnedData.TodoList[1].Content, ShouldEqual, todoModel2.Content)
-					So(returnedData.TodoList[0].Done, ShouldEqual, todoModel1.Done)
-					So(returnedData.TodoList[1].Done, ShouldEqual, todoModel2.Done)
+					So(returnedData.TodoList[0].ID, ShouldEqual, todoID2)
+					So(returnedData.TodoList[1].ID, ShouldEqual, todoID1)
+					So(returnedData.TodoList[0].Content, ShouldEqual, todoModel2.Content)
+					So(returnedData.TodoList[1].Content, ShouldEqual, todoModel1.Content)
+					So(returnedData.TodoList[0].Done, ShouldEqual, todoModel2.Done)
+					So(returnedData.TodoList[1].Done, ShouldEqual, todoModel1.Done)
+					So(returnedData.TodoList[0].Index, ShouldEqual, todoModel2.Index)
+					So(returnedData.TodoList[1].Index, ShouldEqual, todoModel1.Index)
 				})
 			})
 		})
@@ -228,6 +231,73 @@ func Test_TodoUpdate(t *testing.T) {
 			})
 		})
 		repository.DeleteTodoRepository(todoID)
+	})
+}
+
+func Test_TodoSortUpdate(t *testing.T) {
+	Convey("Given to-do models in database", t, func() {
+		repository := GetTestRepository()
+		service := NewService(repository)
+		api := NewAPI(service)
+
+		todoID1 := uuid.New().String()
+		todoModel1 := TodoModel{
+			ID:        todoID1,
+			Content:   "To-do put request olustur.",
+			Done:      false,
+			Index:     0,
+			CratedAt:  time.Now().Round(time.Minute).UTC(),
+			UpdatedAt: time.Now().Round(time.Minute).UTC(),
+		}
+
+		todoID2 := uuid.New().String()
+		todoModel2 := TodoModel{
+			ID:        todoID2,
+			Content:   "To-do put request olustur.",
+			Done:      false,
+			Index:     1,
+			CratedAt:  time.Now().Round(time.Minute).UTC(),
+			UpdatedAt: time.Now().Round(time.Minute).UTC(),
+		}
+
+		todoID3 := uuid.New().String()
+		todoModel3 := TodoModel{
+			ID:        todoID3,
+			Content:   "To-do put request olustur.",
+			Done:      false,
+			Index:     2,
+			CratedAt:  time.Now().Round(time.Minute).UTC(),
+			UpdatedAt: time.Now().Round(time.Minute).UTC(),
+		}
+
+		repository.AddTodoRepository(&todoModel1)
+		repository.AddTodoRepository(&todoModel2)
+		repository.AddTodoRepository(&todoModel3)
+		Convey("When I get request", func() {
+			request, _ := http.NewRequest(http.MethodPut, fmt.Sprint("/sort/", todoID1, "/", todoID3, "/", todoID2), nil)
+
+			request.Header.Add("Content-Type", "application/json")
+
+			app := ServiceSetup(api)
+			response, err := app.Test(request, 30000)
+			So(err, ShouldBeNil)
+
+			Convey("Then Status Code Should be 200", func() {
+				So(response.StatusCode, ShouldEqual, fiber.StatusOK)
+
+				returnedData, _ := repository.GetTodoListRepository()
+
+				Convey("Then to-do Should be returned", func() {
+					So(len(returnedData.TodoList), ShouldEqual, 3)
+					So(returnedData.TodoList[0].Index, ShouldEqual, todoModel2.Index)
+					So(returnedData.TodoList[1].Index, ShouldEqual, ((float64(todoModel2.Index) + float64(todoModel1.Index)) / 2))
+					So(returnedData.TodoList[2].Index, ShouldEqual, todoModel1.Index)
+				})
+			})
+		})
+		repository.DeleteTodoRepository(todoID1)
+		repository.DeleteTodoRepository(todoID2)
+		repository.DeleteTodoRepository(todoID3)
 	})
 }
 

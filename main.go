@@ -32,6 +32,7 @@ func ServiceSetup(api *Api) *fiber.App {
 	app.Get("/todo", api.GetTodoListApi)
 	app.Get("/todo/:id", api.GetTodoApi)
 	app.Put("/todo/:id", api.PutTodoApi)
+	app.Put("/sort", api.PutSortApi)
 	app.Delete("/todo/:id", api.DeleteTodoApi)
 
 	return app
