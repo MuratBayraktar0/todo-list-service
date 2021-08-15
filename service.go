@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,8 +18,16 @@ type TodoModel struct {
 	UpdatedAt time.Time `json:"updatedat"`
 }
 
+type Page struct {
+	Number        int `json:"number"`
+	Size          int `json:"size,omitempty"`
+	TotalElements int `json:"totalElements,omitempty"`
+	TotalPages    int `json:"totalPages,omitempty"`
+}
+
 type TodoListModel struct {
 	TodoList []TodoDTO `json:"todolist"`
+	Page     Page      `json:"page"`
 }
 
 type Service struct {
@@ -36,7 +45,7 @@ func (service *Service) PostTodoService(todoDTO *TodoDTO) (*TodoDTO, error) {
 		return nil, fiber.ErrBadRequest
 	}
 
-	todoListEntitiy, _ := service.repository.GetTodoListRepository()
+	todoListEntitiy, _, _ := service.repository.GetTodoListRepository(0, 0)
 
 	index := float64(0)
 	if len(todoListEntitiy.TodoList) > 0 {
@@ -66,13 +75,22 @@ func (service *Service) GetTodoService(id string) (*TodoDTO, error) {
 	return ConvertTodoEntitytoDTO(todoEntity), nil
 }
 
-func (service *Service) GetTodoListService() (*TodoListDTO, error) {
-	todoListEntity, err := service.repository.GetTodoListRepository()
+func (service *Service) GetTodoListService(page int, size int) (*TodoListDTO, error) {
+	todoListEntity, totalElements, err := service.repository.GetTodoListRepository(page, size)
 	if err != nil {
 		return nil, err
 	}
 
-	return ConvertTodoListEntitytoDTO(todoListEntity), nil
+	pageModel := Page{
+		Number:        page,
+		Size:          size,
+		TotalElements: totalElements,
+		TotalPages:    int(math.Ceil(float64(totalElements) / float64(size))),
+	}
+
+	todoListDTO := ConvertTodoListEntitytoDTO(todoListEntity)
+	todoListDTO.Page = pageModel
+	return todoListDTO, nil
 }
 
 func (service *Service) UpdateTodoService(id string, todoDTO *TodoDTO) (*TodoDTO, error) {

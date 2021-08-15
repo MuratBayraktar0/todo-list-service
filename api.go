@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,6 +16,7 @@ type TodoDTO struct {
 
 type TodoListDTO struct {
 	TodoList []TodoDTO `json:"todolist"`
+	Page     Page      `json:"page"`
 }
 
 type Api struct {
@@ -69,7 +72,29 @@ func (api *Api) GetTodoApi(ctx *fiber.Ctx) error {
 }
 
 func (api *Api) GetTodoListApi(ctx *fiber.Ctx) error {
-	returnedData, err := api.service.GetTodoListService()
+	pageStr := ctx.Query("page")
+	page := 0
+	if len(pageStr) != 0 {
+		var err error
+		page, err = strconv.Atoi(pageStr)
+		if page < 0 || err != nil {
+			ctx.Status(fiber.StatusBadRequest)
+			return err
+		}
+	}
+
+	sizeStr := ctx.Query("size")
+	size := 20
+	if len(sizeStr) != 0 {
+		var err error
+		size, err = strconv.Atoi(sizeStr)
+		if size <= 0 || err != nil {
+			ctx.Status(fiber.StatusBadRequest)
+			return err
+		}
+	}
+
+	returnedData, err := api.service.GetTodoListService(page, size)
 
 	switch err {
 	case nil:

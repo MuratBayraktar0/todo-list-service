@@ -120,6 +120,8 @@ func Test_TodoListGet(t *testing.T) {
 
 		todoID1 := uuid.New().String()
 		todoID2 := uuid.New().String()
+		todoID3 := uuid.New().String()
+		todoID4 := uuid.New().String()
 
 		todoModel1 := TodoModel{
 			ID:        todoID1,
@@ -137,12 +139,30 @@ func Test_TodoListGet(t *testing.T) {
 			CratedAt:  time.Now().Round(time.Minute).UTC(),
 			UpdatedAt: time.Now().Round(time.Minute).UTC(),
 		}
+		todoModel3 := TodoModel{
+			ID:        todoID3,
+			Content:   "To-do post list request olustur.",
+			Done:      false,
+			Index:     2,
+			CratedAt:  time.Now().Round(time.Minute).UTC(),
+			UpdatedAt: time.Now().Round(time.Minute).UTC(),
+		}
+		todoModel4 := TodoModel{
+			ID:        todoID4,
+			Content:   "To-do post list request olustur.",
+			Done:      false,
+			Index:     3,
+			CratedAt:  time.Now().Round(time.Minute).UTC(),
+			UpdatedAt: time.Now().Round(time.Minute).UTC(),
+		}
 
 		repository.AddTodoRepository(&todoModel1)
 		repository.AddTodoRepository(&todoModel2)
+		repository.AddTodoRepository(&todoModel3)
+		repository.AddTodoRepository(&todoModel4)
 
 		Convey("When I get request", func() {
-			request, _ := http.NewRequest(http.MethodGet, "/todo", nil)
+			request, _ := http.NewRequest(http.MethodGet, "/todo?page=0&size=2", nil)
 
 			request.Header.Add("Content-Type", "application/json")
 
@@ -164,19 +184,21 @@ func Test_TodoListGet(t *testing.T) {
 					So(len(returnedData.TodoList), ShouldEqual, 2)
 					So(returnedData.TodoList[0].ID, ShouldNotBeEmpty)
 					So(returnedData.TodoList[1].ID, ShouldNotBeEmpty)
-					So(returnedData.TodoList[0].ID, ShouldEqual, todoID2)
-					So(returnedData.TodoList[1].ID, ShouldEqual, todoID1)
-					So(returnedData.TodoList[0].Content, ShouldEqual, todoModel2.Content)
-					So(returnedData.TodoList[1].Content, ShouldEqual, todoModel1.Content)
-					So(returnedData.TodoList[0].Done, ShouldEqual, todoModel2.Done)
-					So(returnedData.TodoList[1].Done, ShouldEqual, todoModel1.Done)
-					So(returnedData.TodoList[0].Index, ShouldEqual, todoModel2.Index)
-					So(returnedData.TodoList[1].Index, ShouldEqual, todoModel1.Index)
+					So(returnedData.TodoList[0].ID, ShouldEqual, todoID4)
+					So(returnedData.TodoList[1].ID, ShouldEqual, todoID3)
+					So(returnedData.TodoList[0].Content, ShouldEqual, todoModel4.Content)
+					So(returnedData.TodoList[1].Content, ShouldEqual, todoModel3.Content)
+					So(returnedData.TodoList[0].Done, ShouldEqual, todoModel4.Done)
+					So(returnedData.TodoList[1].Done, ShouldEqual, todoModel3.Done)
+					So(returnedData.TodoList[0].Index, ShouldEqual, todoModel4.Index)
+					So(returnedData.TodoList[1].Index, ShouldEqual, todoModel3.Index)
 				})
 			})
 		})
 		repository.DeleteTodoRepository(todoID1)
 		repository.DeleteTodoRepository(todoID2)
+		repository.DeleteTodoRepository(todoID3)
+		repository.DeleteTodoRepository(todoID4)
 	})
 }
 
@@ -274,7 +296,7 @@ func Test_TodoSortUpdate(t *testing.T) {
 		repository.AddTodoRepository(&todoModel2)
 		repository.AddTodoRepository(&todoModel3)
 		Convey("When I get request", func() {
-			request, _ := http.NewRequest(http.MethodPut, fmt.Sprint("/sort/", todoID1, "/", todoID3, "/", todoID2), nil)
+			request, _ := http.NewRequest(http.MethodPut, fmt.Sprint("/sort?backId=", todoID1, "&currentId=", todoID3, "&frontId=", todoID2), nil)
 
 			request.Header.Add("Content-Type", "application/json")
 
@@ -285,7 +307,7 @@ func Test_TodoSortUpdate(t *testing.T) {
 			Convey("Then Status Code Should be 200", func() {
 				So(response.StatusCode, ShouldEqual, fiber.StatusOK)
 
-				returnedData, _ := repository.GetTodoListRepository()
+				returnedData, _, _ := repository.GetTodoListRepository(0, 0)
 
 				Convey("Then to-do Should be returned", func() {
 					So(len(returnedData.TodoList), ShouldEqual, 3)

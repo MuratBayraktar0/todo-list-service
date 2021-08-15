@@ -59,15 +59,23 @@ func (repository *Repository) GetTodoRepository(id string) (*TodoEntity, error) 
 	return &todoEntity, nil
 }
 
-func (repository *Repository) GetTodoListRepository() (*TodoListEntity, error) {
+func (repository *Repository) GetTodoListRepository(page int, size int) (*TodoListEntity, int, error) {
 	collection := repository.client.Database("todo").Collection("todolist")
 	ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+
 	findOptions := options.Find()
+	if size != 0 {
+		findOptions.SetSkip(int64(page * size))
+		findOptions.SetLimit(int64(size))
+	}
+
 	findOptions.SetSort(bson.D{{"index", -1}})
 	cursor, err := collection.Find(ctx, bson.M{}, findOptions)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+	totalElements, err := collection.CountDocuments(ctx, bson.M{})
+
 	defer cursor.Close(ctx)
 	todoListEntity := TodoListEntity{}
 	for cursor.Next(ctx) {
@@ -77,13 +85,13 @@ func (repository *Repository) GetTodoListRepository() (*TodoListEntity, error) {
 	}
 
 	if err = cursor.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return &todoListEntity, nil
+	return &todoListEntity, int(totalElements), nil
 }
 
 func (repository *Repository) UpdateTodoRepository(id string, todoModel *TodoModel) (*TodoEntity, error) {
